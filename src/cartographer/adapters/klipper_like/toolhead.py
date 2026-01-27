@@ -159,3 +159,13 @@ class KlipperLikeToolhead(Toolhead, ABC):
         time = self.mcu.get_current_time()
         heater = self.toolhead.get_extruder().get_heater().get_status(time)
         return TemperatureStatus(heater["temperature"], heater["target"])
+
+    @override
+    def get_homing_positive_dir(self, axis: HomingAxis) -> bool:
+        configfile = self.printer.lookup_object("configfile")
+        config = configfile.config
+        stepper_name = f"stepper_{axis}"
+        if stepper_name not in config:
+            return False
+        stepper_config = config[stepper_name]
+        return stepper_config.get("homing_positive_dir", 0) == 1

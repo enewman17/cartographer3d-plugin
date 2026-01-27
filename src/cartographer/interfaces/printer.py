@@ -208,3 +208,7 @@ class Toolhead(Protocol):
     def set_max_accel(self, accel: float) -> None:
         """Set the current maximum accel"""
         ...
+
+    def get_homing_positive_dir(self, axis: HomingAxis) -> bool:
+        """Get whether the homing direction is positive (endstop at max) for the specified axis."""
+        ...

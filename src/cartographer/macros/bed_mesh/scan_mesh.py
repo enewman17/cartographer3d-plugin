@@ -140,6 +140,10 @@ class MeshScanParams:
         )
 
 
+# Cartographer coil diameter is 16mm, radius is 8mm
+COIL_RADIUS_MM = 8.0
+
+
 @final
 class BedMeshCalibrateMacro(Macro, SupportsFallbackMacro):
     description = "Gather samples across the bed to calibrate the bed mesh."
@@ -215,18 +219,89 @@ class BedMeshCalibrateMacro(Macro, SupportsFallbackMacro):
         return self.coordinate_transformer.normalize_to_zero_reference_point(positions, zero_height=zero_measure)
 
     def _generate_path(self, grid: MeshGrid, params: MeshScanParams) -> list[Point]:
-        """Generate scanning path from grid points."""
+        """Generate scanning path from grid points.
+        
+        Negative offsets indicate the coil is opposite (away) from the endstops.
+        The coil radius is added to the offset magnitude to ensure the entire coil remains
+        within bed bounds during probing. The probe area is constrained by bed_size limits.
+        """
         mesh_points = grid.generate_points()
 
-        x_min, x_max = self.toolhead.get_axis_limits("x")
-        y_min, y_max = self.toolhead.get_axis_limits("y")
+        # Get bed size limits from configuration as authoritative limits
+        bed_x_size, bed_y_size = self.config.bed_size
+        x_min, x_max = 0, bed_x_size
+        y_min, y_max = 0, bed_y_size
+        
         ox, oy = self.probe.scan.offset.x, self.probe.scan.offset.y
+
+        # Get homing directions for each axis
+        try:
+            x_homing_positive = self.toolhead.get_homing_positive_dir("x")
+            y_homing_positive = self.toolhead.get_homing_positive_dir("y")
+        except (KeyError, AttributeError, TypeError):
+            # Fallback: assume positive homing direction (endstops at max)
+            x_homing_positive = True
+            y_homing_positive = True
+
+        # Calculate safe distance accounting for offset direction relative to endstop
+        # For X axis
+        if x_homing_positive:
+            # Endstop at max: positive offset moves toward endstop, negative moves away
+            x_safe_distance_min = abs(ox) + COIL_RADIUS_MM if ox < 0 else COIL_RADIUS_MM
+            x_safe_distance_max = abs(ox) + COIL_RADIUS_MM if ox > 0 else COIL_RADIUS_MM
+        else:
+            # Endstop at min: positive offset moves away, negative moves toward endstop
+            x_safe_distance_min = abs(ox) + COIL_RADIUS_MM if ox > 0 else COIL_RADIUS_MM
+            x_safe_distance_max = abs(ox) + COIL_RADIUS_MM if ox < 0 else COIL_RADIUS_MM
+
+        # For Y axis
+        if y_homing_positive:
+            # Endstop at max: positive offset moves toward endstop, negative moves away
+            y_safe_distance_min = abs(oy) + COIL_RADIUS_MM if oy < 0 else COIL_RADIUS_MM
+            y_safe_distance_max = abs(oy) + COIL_RADIUS_MM if oy > 0 else COIL_RADIUS_MM
+        else:
+            # Endstop at min: positive offset moves away, negative moves toward endstop
+            y_safe_distance_min = abs(oy) + COIL_RADIUS_MM if oy > 0 else COIL_RADIUS_MM
+            y_safe_distance_max = abs(oy) + COIL_RADIUS_MM if oy < 0 else COIL_RADIUS_MM
+
+        # Apply safety margins: reduce probe area from edges to keep coil on bed
+        x_limit_min = x_min + x_safe_distance_min
+        x_limit_max = x_max - x_safe_distance_max
+        y_limit_min = y_min + y_safe_distance_min
+        y_limit_max = y_max - y_safe_distance_max
+
+        # Ensure limits are valid (min <= max)
+        if x_limit_min >= x_limit_max:
+            msg = (
+                f"X offset ({ox}mm) with coil radius ({COIL_RADIUS_MM}mm) exceeds bed width. "
+                f"Required margins exceed available space."
+            )
+            raise RuntimeError(msg)
+        if y_limit_min >= y_limit_max:
+            msg = (
+                f"Y offset ({oy}mm) with coil radius ({COIL_RADIUS_MM}mm) exceeds bed height. "
+                f"Required margins exceed available space."
+            )
+            raise RuntimeError(msg)
+
+        logger.debug(
+            "Path limits - X: [%.2f, %.2f] (range: %.2f), Y: [%.2f, %.2f] (range: %.2f), "
+            "X homing pos dir: %s, Y homing pos dir: %s",
+            x_limit_min,
+            x_limit_max,
+            x_limit_max - x_limit_min,
+            y_limit_min,
+            y_limit_max,
+            y_limit_max - y_limit_min,
+            x_homing_positive,
+            y_homing_positive,
+        )
 
         return list(
             params.path_generator.generate_path(
                 mesh_points,
-                (x_min + max(0, ox), x_max + min(0, ox)),
-                (y_min + max(0, oy), y_max + min(0, oy)),
+                (x_limit_min, x_limit_max),
+                (y_limit_min, y_limit_max),
             )
         )
 
