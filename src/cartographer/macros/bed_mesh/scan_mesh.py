@@ -217,20 +217,20 @@ class BedMeshCalibrateMacro(Macro, SupportsFallbackMacro):
             zero_measure += self.axis_twist_compensation.get_z_compensation_value(x=float(nx), y=float(ny))
 
         return self.coordinate_transformer.normalize_to_zero_reference_point(positions, zero_height=zero_measure)
+    
 
+        # Negative offsets indicate the coil is opposite (away) from the endstops.
+        # The coil radius is added to the offset magnitude to ensure the entire coil remains
+        # within bed bounds during probing. The probe area is constrained by bed_size limits.
     def _generate_path(self, grid: MeshGrid, params: MeshScanParams) -> list[Point]:
-        """Generate scanning path from grid points.
-        
-        Negative offsets indicate the coil is opposite (away) from the endstops.
-        The coil radius is added to the offset magnitude to ensure the entire coil remains
-        within bed bounds during probing. The probe area is constrained by bed_size limits.
-        """
+        """Generate scanning path from grid points."""
+
         mesh_points = grid.generate_points()
 
         # Get bed size limits from configuration as authoritative limits
-        bed_x_size, bed_y_size = self.config.bed_size
-        x_min, x_max = 0, bed_x_size
-        y_min, y_max = 0, bed_y_size
+        bed_size_x, bed_size_y = self.config.bed_size
+        x_min, x_max = 0, bed_size_x
+        y_min, y_max = 0, bed_size_y
         
         ox, oy = self.probe.scan.offset.x, self.probe.scan.offset.y
 

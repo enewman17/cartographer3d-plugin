@@ -4,6 +4,8 @@ from typing import TYPE_CHECKING, final
 
 from cartographer.adapters.klipper_like.utils import reraise_for_klipper
 
+from collections import namedtuple
+
 if TYPE_CHECKING:
     from gcode import GCodeCommand
 
@@ -25,11 +27,16 @@ class KlipperProbeSession:
         trigger_pos = self._probe.perform_probe()
         self._results.append([pos.x, pos.y, trigger_pos])
 
-    def pull_probed_results(self):
-        result = self._results
-        self._results = []
-        return result
+    def pull_probed_results(self) -> list:
+        ProbeResult = namedtuple('ProbeResult', ['bed_z'])
+        formatted_results = []
+        for pos in self._results:
+            result = ProbeResult(bed_z=pos[2])
+            formatted_results.append(result)
 
+        self._results = []
+        return formatted_results
+        
     def end_probe_session(self) -> None:
         self._results = []
 
@@ -66,7 +73,7 @@ class KlipperCartographerProbe:
             "samples_result": "median",
         }
 
-    def get_offsets(self) -> tuple[float, float, float]:
+    def get_offsets(self, gcmd=None) -> tuple[float, float, float]:
         return self.probe.offset.as_tuple()
 
     def get_status(self, eventtime: float):
