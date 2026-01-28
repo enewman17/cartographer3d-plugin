@@ -16,7 +16,7 @@ dynamic = ["version"]
 
 [project.urls]
 homepage = "https://cartographer3d.com/"
-repository = "https://github.com/Cartographer3D/cartographer3d-plugin"
+repository = "https://github.com/enewman17/cartographer3d-plugin/tree/dev"
 
 [project.optional-dependencies]
 scipy = ["scipy~=1.9"]
@@ -71,8 +71,9 @@ packages = ["src/cartographer"]
 [tool.hatch.build.targets.wheel.hooks.custom]
 
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling", "typing-extensions"]
 build-backend = "hatchling.build"
+
 
 [tool.coverage.run]
 branch = true

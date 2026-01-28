@@ -10,7 +10,10 @@ from typing import Any, TypedDict
 
 from hatchling.builders.config import BuilderConfig
 from hatchling.builders.hooks.plugin.interface import BuildHookInterface
-from typing_extensions import override
+try:
+    from typing import override
+except ImportError:
+    from typing_extensions import override
 
 
 def _run_git_command(cmd: str) -> str:
