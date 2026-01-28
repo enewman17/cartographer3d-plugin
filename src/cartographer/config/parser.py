@@ -66,6 +66,7 @@ def parse_general_config(wrapper: ParseConfigWrapper) -> GeneralConfig:
         lift_speed=wrapper.get_float("lift_speed", default=5, minimum=1),
         macro_prefix=wrapper.get_optional_str("macro_prefix"),
         verbose=wrapper.get_bool("verbose", default=False),
+        bed_size=list_to_tuple(wrapper.get_required_float_list("bed_size", count=2)),
     )
 
 
@@ -147,7 +148,6 @@ def parse_bed_mesh_config(wrapper: ParseConfigWrapper) -> BedMeshConfig:
         adaptive_margin=wrapper.get_float("adaptive_margin", default=5, minimum=0),
         zero_reference_position=list_to_tuple(wrapper.get_required_float_list("zero_reference_position", count=2)),
         faulty_regions=faulty_regions,
-        bed_size=list_to_tuple(wrapper.get_required_float_list("bed_size", count=2)),
     )
 
 
