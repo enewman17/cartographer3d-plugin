@@ -7,6 +7,8 @@ PACKAGE_NAME="cartographer3d-plugin"
 SCAFFOLDING="from cartographer.extra import *"
 DEFAULT_KLIPPER_DIR="$HOME/klipper"
 DEFAULT_KLIPPY_ENV="$HOME/klippy-env"
+DEFAULT_BRANCH="dev"
+GITHUB_REPO="https://github.com/enewman17/cartographer3d-plugin"
 
 function display_help() {
   echo "Usage: $0 [OPTIONS]"
@@ -14,6 +16,7 @@ function display_help() {
   echo "Options:"
   echo "  -k, --klipper       Set the Klipper directory (default: $DEFAULT_KLIPPER_DIR)"
   echo "  -e, --klippy-env    Set the Klippy virtual environment directory (default: $DEFAULT_KLIPPY_ENV)"
+  echo "  -b, --branch        Set the git branch to install from (default: $DEFAULT_BRANCH)"
   echo "  --uninstall         Uninstall the package and remove all scaffolding files"
   echo "  --help              Show this help message and exit"
   echo ""
@@ -23,6 +26,7 @@ function display_help() {
 
 function parse_args() {
   uninstall=false
+  branch="$DEFAULT_BRANCH"
   while [[ "$#" -gt 0 ]]; do
     case "$1" in
     -k | --klipper)
@@ -31,6 +35,10 @@ function parse_args() {
       ;;
     -e | --klippy-env)
       klippy_env="$2"
+      shift 2
+      ;;
+    -b | --branch)
+      branch="$2"
       shift 2
       ;;
     --uninstall)
@@ -85,9 +93,9 @@ except ImportError:
 
 function install_dependencies() {
   ensure_numpy
-  echo "Installing or upgrading '$PACKAGE_NAME' into '$klippy_env'..."
-  "$klippy_env/bin/pip" install --upgrade "$PACKAGE_NAME"
-  echo "'$PACKAGE_NAME' has been successfully installed or upgraded into '$klippy_env'."
+  echo "Installing or upgrading '$PACKAGE_NAME' from branch '$branch' into '$klippy_env'..."
+  "$klippy_env/bin/pip" install --upgrade "git+${GITHUB_REPO}.git@${branch}"
+  echo "'$PACKAGE_NAME' from branch '$branch' has been successfully installed or upgraded into '$klippy_env'."
 }
 
 function uninstall_dependencies() {
@@ -173,6 +181,7 @@ function remove_plugin_files() {
 function main() {
   klipper_dir="$DEFAULT_KLIPPER_DIR"
   klippy_env="$DEFAULT_KLIPPY_ENV"
+  branch="$DEFAULT_BRANCH"
 
   parse_args "$@"
 
