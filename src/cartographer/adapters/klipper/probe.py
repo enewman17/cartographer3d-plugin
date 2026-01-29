@@ -4,8 +4,6 @@ from typing import TYPE_CHECKING, final
 
 from cartographer.adapters.klipper_like.utils import reraise_for_klipper
 
-from collections import namedtuple
-
 if TYPE_CHECKING:
     from gcode import GCodeCommand
 
@@ -27,18 +25,13 @@ class KlipperProbeSession:
         trigger_pos = self._probe.perform_probe()
         self._results.append([pos.x, pos.y, trigger_pos])
 
-    def pull_probed_results(self) -> list:
-        ProbeResult = namedtuple('ProbeResult', ['bed_z'])
-        formatted_results = []
-        for pos in self._results:
-            result = ProbeResult(bed_z=pos[2])
-            formatted_results.append(result)
-
+    def pull_probed_results(self):
+        # Convert lists to ProbeResult objects for compatibility with Klipper's z_tilt and bed_mesh
+        import importlib
+        manual_probe = importlib.import_module(".manual_probe", "extras")
+        result = [manual_probe.ProbeResult(pos[0], pos[1], pos[2], pos[0], pos[1], pos[2]) for pos in self._results]
         self._results = []
-        return formatted_results
-        
-    def end_probe_session(self) -> None:
-        self._results = []
+        return result
 
 
 @final
