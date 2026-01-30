@@ -27,7 +27,7 @@ class KlipperProbeSession:
 
     def pull_probed_results(self):
         # Convert lists to ProbeResult objects for compatibility with Klipper's z_tilt and bed_mesh
-        # ProbeResult expects: bed_x, bed_y, bed_z, nozzle_x, nozzle_y, nozzle_z
+        # ProbeResult expects: bed_x, bed_y, bed_z, test_x, test_y, test_z
         # pos[0] = nozzle x, pos[1] = nozzle y, pos[2] = trigger z (bed_z)
         import importlib
         manual_probe = importlib.import_module(".manual_probe", "extras")
@@ -36,14 +36,18 @@ class KlipperProbeSession:
                 bed_x=pos[0],
                 bed_y=pos[1],
                 bed_z=pos[2],
-                nozzle_x=pos[0],
-                nozzle_y=pos[1],
-                nozzle_z=pos[2]
+                test_x=pos[0],
+                test_y=pos[1],
+                test_z=pos[2]
             )
             for pos in self._results
         ]
         self._results = []
         return result
+
+    def end_probe_session(self) -> None:
+        """Clean up after probing session completes."""
+        self._results = []
 
 
 @final
